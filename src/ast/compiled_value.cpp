@@ -1,12 +1,12 @@
-#include <sstream>
-#include <llvm/Support/raw_os_ostream.h>
-#include <llvm/IR/Value.h>
-#include <llvm/IR/Type.h>
 #include "ast/compiled_value.hpp"
+#include <llvm/IR/Type.h>
+#include <llvm/IR/Value.h>
+#include <llvm/Support/raw_os_ostream.h>
+#include <sstream>
 
 namespace letsjit::ast {
 
-std::ostream& operator<<(std::ostream& os, const CompiledValue& value) {
+std::ostream &operator<<(std::ostream &os, const CompiledValue &value) {
   if (!value.value) {
     os << "void";
     return os;
@@ -26,7 +26,7 @@ std::string CompiledValue::ToString(bool for_debug) const {
   return oss.str();
 }
 
-bool CompiledValue::IsSameType(const CompiledValue& other) const {
+bool CompiledValue::IsSameType(const CompiledValue &other) const {
   return GetTypeInfo() == other.GetTypeInfo();
 }
 
@@ -37,4 +37,4 @@ Typeinfo CompiledValue::GetTypeInfo() const {
   return Typeinfo{value->getType()};
 }
 
-}
+} // namespace letsjit::ast

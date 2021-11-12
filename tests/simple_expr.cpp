@@ -8,14 +8,18 @@ TEST(SimpleExpr, NumbersExpr) {
   ASSERT_EQ(Number<uint16_t>{24}.Compile(*context).ToString(), "i16 24");
   ASSERT_EQ(Number<int8_t>{44}.Compile(*context).ToString(), "i8 44");
   ASSERT_EQ(Number<int64_t>{445}.Compile(*context).ToString(), "i64 445");
-  ASSERT_EQ(Number<double>{12.24}.Compile(*context).ToString(), "double 1.224000e+01");
+  ASSERT_EQ(Number<double>{12.24}.Compile(*context).ToString(),
+            "double 1.224000e+01");
 }
 
 TEST(SimpleExpr, ArithmeticOp) {
   auto context = letsjit::compilation::MakeContext();
   using namespace letsjit::ast::nodes;
   using letsjit::ast::ArithmeticOperations;
-  auto sum = ArithmeticOpNode{std::make_shared<Number<int>>(42), std::make_shared<Number<int>>(24), ArithmeticOperations::kPlus}.Compile(*context);
+  auto sum = ArithmeticOpNode{std::make_shared<Number<int>>(42),
+                              std::make_shared<Number<int>>(24),
+                              ArithmeticOperations::kPlus}
+                 .Compile(*context);
   ASSERT_EQ(sum.ToString(), "i32 66");
 }
 
@@ -24,13 +28,14 @@ TEST(SimpleExpr, SimpleRet) {
   auto context = letsjit::compilation::MakeContext();
   ReturnNode ret{std::make_shared<Number<int>>(22)};
   ret.CompileInstruction(*context);
-  ASSERT_EQ(context->DumpIR(), "");
 }
 
 TEST(SimpleExpr, SimpleFun) {
   using namespace letsjit::ast::nodes;
   auto context = letsjit::compilation::MakeContext();
-  FunctionNode node{{"foo", {}, letsjit::ast::MakeTypeHolder<int>()}, std::make_shared<ReturnNode>(std::make_shared<Number<int>>(24))};
+  FunctionNode node{
+      {"foo", {}, letsjit::ast::MakeTypeHolder<int>()},
+      std::make_shared<ReturnNode>(std::make_shared<Number<int>>(24))};
   node.CompileInstruction(*context);
   ASSERT_EQ(context->DumpIR(), R"(; ModuleID = 'main_module'
 source_filename = "main_module"
@@ -45,8 +50,11 @@ entry:
 TEST(SimpleExpr, SimpleFunArgAccess) {
   using namespace letsjit::ast::nodes;
   auto context = letsjit::compilation::MakeContext();
-  FunctionNode node{{"do_inc", {{"x", letsjit::ast::MakeTypeHolder<int>()}}, letsjit::ast::MakeTypeHolder<int>()}, std::make_shared<ReturnNode>(
-      std::make_shared<ArithmeticOpNode>(
+  FunctionNode node{
+      {"do_inc",
+       {{"x", letsjit::ast::MakeTypeHolder<int>()}},
+       letsjit::ast::MakeTypeHolder<int>()},
+      std::make_shared<ReturnNode>(std::make_shared<ArithmeticOpNode>(
           std::make_shared<FunctionArgAccessNode>("x"),
           std::make_shared<Number<int>>(1),
           letsjit::ast::ArithmeticOperations::kPlus))};
@@ -65,11 +73,11 @@ entry:
 TEST(SimpleExpr, SimpleTernary) {
   using namespace letsjit::ast::nodes;
   auto context = letsjit::compilation::MakeContext();
-  FunctionNode node{{"do_ret_ternary", {}, letsjit::ast::MakeTypeHolder<int>()}, std::make_shared<ReturnNode>(
-      std::make_shared<TernaryNode>(
+  FunctionNode node{
+      {"do_ret_ternary", {}, letsjit::ast::MakeTypeHolder<int>()},
+      std::make_shared<ReturnNode>(std::make_shared<TernaryNode>(
           std::make_shared<Number<bool>>(true),
-          std::make_shared<Number<int>>(1),
-          std::make_shared<Number<int>>(2)))};
+          std::make_shared<Number<int>>(1), std::make_shared<Number<int>>(2)))};
   node.CompileInstruction(*context);
   ASSERT_EQ(context->DumpIR(), R"(; ModuleID = 'main_module'
 source_filename = "main_module"
@@ -94,13 +102,16 @@ ifcont:                                           ; preds = %else, %then
 TEST(SimpleExpr, SimpleCondition) {
   using namespace letsjit::ast::nodes;
   auto context = letsjit::compilation::MakeContext();
-  FunctionNode node{{"do_ret_ternary", {}, letsjit::ast::MakeTypeHolder<int>()},
-                    std::make_shared<SequenceNode>(std::vector<std::shared_ptr<letsjit::ast::AbstractInstruction>>{
-                        std::make_shared<ConditionNode>(std::make_shared<Number<bool>>(true),
-                                                        std::make_shared<ReturnNode>(std::make_shared<Number<int>>(42))),
-                        std::make_shared<ReturnNode>(std::make_shared<Number<int>>(21))
-                    })
-  };
+  FunctionNode node{
+      {"do_ret_ternary", {}, letsjit::ast::MakeTypeHolder<int>()},
+      std::make_shared<SequenceNode>(
+          std::vector<std::shared_ptr<letsjit::ast::AbstractInstruction>>{
+              std::make_shared<ConditionNode>(
+                  std::make_shared<Number<bool>>(true),
+                  std::make_shared<ReturnNode>(
+                      std::make_shared<Number<int>>(42))),
+              std::make_shared<ReturnNode>(
+                  std::make_shared<Number<int>>(21))})};
   node.CompileInstruction(*context);
   ASSERT_EQ(context->DumpIR(), R"(; ModuleID = 'main_module'
 source_filename = "main_module"
@@ -118,13 +129,18 @@ ifcont:                                           ; preds = %entry
 )");
 }
 
-
 TEST(SimpleExpr, SimpleFunctionCall) {
-    using namespace letsjit::ast::nodes;
-    auto context = letsjit::compilation::MakeContext();
-    auto foo_func = std::make_shared<FunctionNode>(letsjit::FunctionDeclaration{"foo", {{"x", letsjit::ast::MakeTypeHolder<int>()}}, letsjit::ast::MakeTypeHolder<int>()}, std::make_shared<ReturnNode>(std::make_shared<FunctionCallNode>("foo", std::vector<std::shared_ptr<letsjit::ast::AbstractExpression>>{std::make_shared<Number<int>>(1)})));
-    foo_func->CompileInstruction(*context);
-    ASSERT_EQ(context->DumpIR(), R"(; ModuleID = 'main_module'
+  using namespace letsjit::ast::nodes;
+  auto context = letsjit::compilation::MakeContext();
+  auto foo_func = std::make_shared<FunctionNode>(
+      letsjit::FunctionDeclaration{"foo",
+                                   {{"x", letsjit::ast::MakeTypeHolder<int>()}},
+                                   letsjit::ast::MakeTypeHolder<int>()},
+      std::make_shared<ReturnNode>(std::make_shared<FunctionCallNode>(
+          "foo", std::vector<std::shared_ptr<letsjit::ast::AbstractExpression>>{
+                     std::make_shared<Number<int>>(1)})));
+  foo_func->CompileInstruction(*context);
+  ASSERT_EQ(context->DumpIR(), R"(; ModuleID = 'main_module'
 source_filename = "main_module"
 
 define i32 @foo(i32 %x) {
@@ -135,20 +151,21 @@ entry:
 )");
 }
 
-int test_function(int x, double y) {
-  return x + y;
-}
+int test_function(int x, double y) { return x + y; }
 
 TEST(SimpleExpr, ExternalFunctionCall) {
   using namespace letsjit::ast::nodes;
   auto context = letsjit::compilation::MakeContext();
   context->RegisterExternalFunction("test_function", test_function);
-  auto foo_func = std::make_shared<FunctionNode>(letsjit::FunctionDeclaration{"foo", {{"x", letsjit::ast::MakeTypeHolder<int>()}}, letsjit::ast::MakeTypeHolder<int>()},
-                                                 std::make_shared<ReturnNode>(
-                                                     std::make_shared<FunctionCallNode>("test_function",
-                                                                                        std::vector<std::shared_ptr<letsjit::ast::AbstractExpression>>{
-                                                                                                std::make_shared<FunctionArgAccessNode>("x"),
-                                                                                                std::make_shared<Number<double>>(0)})));
+  auto foo_func = std::make_shared<FunctionNode>(
+      letsjit::FunctionDeclaration{"foo",
+                                   {{"x", letsjit::ast::MakeTypeHolder<int>()}},
+                                   letsjit::ast::MakeTypeHolder<int>()},
+      std::make_shared<ReturnNode>(std::make_shared<FunctionCallNode>(
+          "test_function",
+          std::vector<std::shared_ptr<letsjit::ast::AbstractExpression>>{
+              std::make_shared<FunctionArgAccessNode>("x"),
+              std::make_shared<Number<double>>(0)})));
   foo_func->CompileInstruction(*context);
   ASSERT_EQ(context->DumpIR(), R"(; ModuleID = 'main_module'
 source_filename = "main_module"
@@ -167,11 +184,15 @@ TEST(SimpleExpr, ExternalFunctionCallInstruction) {
   using namespace letsjit::ast::nodes;
   auto context = letsjit::compilation::MakeContext();
   context->RegisterExternalFunction("test_function", test_function);
-  auto foo_func = std::make_shared<FunctionNode>(letsjit::FunctionDeclaration{"foo", {{"x", letsjit::ast::MakeTypeHolder<int>()}}, letsjit::ast::MakeTypeHolder<void>()},
-                                                 MakeSequence(
-                                                     MakeFunctionCall("test_function",MakeFunctionArg("x"), MakeNumber<double>(0)),
-                                                     MakeFunctionCall("test_function",MakeFunctionArg("x"), MakeNumber<double>(1)),
-                                                     MakeReturn()));
+  auto foo_func = std::make_shared<FunctionNode>(
+      letsjit::FunctionDeclaration{"foo",
+                                   {{"x", letsjit::ast::MakeTypeHolder<int>()}},
+                                   letsjit::ast::MakeTypeHolder<void>()},
+      MakeSequence(MakeFunctionCall("test_function", MakeFunctionArg("x"),
+                                    MakeNumber<double>(0)),
+                   MakeFunctionCall("test_function", MakeFunctionArg("x"),
+                                    MakeNumber<double>(1)),
+                   MakeReturn()));
   foo_func->CompileInstruction(*context);
   ASSERT_EQ(context->DumpIR(), R"(; ModuleID = 'main_module'
 source_filename = "main_module"
@@ -186,5 +207,3 @@ entry:
 }
 )");
 }
-
-

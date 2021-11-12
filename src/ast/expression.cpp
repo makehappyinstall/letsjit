@@ -2,8 +2,7 @@
 
 namespace letsjit::ast {
 
-AbstractExpression::~AbstractExpression() {
-}
+AbstractExpression::~AbstractExpression() {}
 VoidExpression kVoidValue;
 
-}
+} // namespace letsjit::ast

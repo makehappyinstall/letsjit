@@ -2,8 +2,9 @@
 
 namespace letsjit::ast::nodes {
 
-std::shared_ptr<ReturnNode> MakeReturn(std::shared_ptr<AbstractExpression> expr) {
+std::shared_ptr<ReturnNode>
+MakeReturn(std::shared_ptr<AbstractExpression> expr) {
   return std::make_shared<ReturnNode>(expr);
 }
 
-}
+} // namespace letsjit::ast::nodes

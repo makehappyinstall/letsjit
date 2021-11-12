@@ -27,6 +27,15 @@ struct FunctionDeclaration {
   std::vector<llvm::Type*> FetchArgTypes(const compilation::Context& ctx) const;
 };
 
+struct FieldDeclaration {
+  size_t offset;
+};
+
+struct StructDeclaration {
+  std::string name;
+  std::unordered_map<std::string, FieldDeclaration> fields;
+};
+
 struct FunctionInfo {
   FunctionDeclaration declaration;
   ::llvm::Function* function;

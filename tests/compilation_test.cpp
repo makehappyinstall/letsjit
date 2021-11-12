@@ -4,8 +4,11 @@
 TEST(Compilation, IncFun) {
   using namespace letsjit::ast::nodes;
   auto context = letsjit::compilation::MakeContext();
-  FunctionNode node{{"do_inc", {{"x", letsjit::ast::MakeTypeHolder<int>()}}, letsjit::ast::MakeTypeHolder<int>()}, std::make_shared<ReturnNode>(
-      Plus(MakeFunctionArg("x"), MakeNumber(1)))};
+  FunctionNode node{
+      {"do_inc",
+       {{"x", letsjit::ast::MakeTypeHolder<int>()}},
+       letsjit::ast::MakeTypeHolder<int>()},
+      std::make_shared<ReturnNode>(Plus(MakeFunctionArg("x"), MakeNumber(1)))};
   node.CompileInstruction(*context);
   context->Compile();
   auto do_inc = context->GetFunction("do_inc");
@@ -16,12 +19,15 @@ TEST(Compilation, IncFun) {
 TEST(Compilation, FactFun) {
   using namespace letsjit::ast::nodes;
   auto context = letsjit::compilation::MakeContext();
-  FunctionNode node{{"fact", {{"x", letsjit::ast::MakeTypeHolder<int>()}}, letsjit::ast::MakeTypeHolder<int>()},
-                    MakeReturn(
-                        MakeTernary(
-                            LessEq(MakeFunctionArg("x"), MakeNumber(1)),
-                            MakeNumber(1),
-                            Mul(MakeFunctionArg("x"), MakeFunctionCall("fact", Sub(MakeFunctionArg("x"), MakeNumber(1))))))};
+  FunctionNode node{
+      {"fact",
+       {{"x", letsjit::ast::MakeTypeHolder<int>()}},
+       letsjit::ast::MakeTypeHolder<int>()},
+      MakeReturn(MakeTernary(
+          LessEq(MakeFunctionArg("x"), MakeNumber(1)), MakeNumber(1),
+          Mul(MakeFunctionArg("x"),
+              MakeFunctionCall("fact",
+                               Sub(MakeFunctionArg("x"), MakeNumber(1))))))};
   node.CompileInstruction(*context);
   std::string program = context->DumpIR();
   context->Compile();
@@ -31,16 +37,16 @@ TEST(Compilation, FactFun) {
 }
 
 int last_x = 0;
-void test_fun(int x) {
-  last_x = x;
-}
+void test_fun(int x) { last_x = x; }
 
 TEST(Compilation, ExternalFunctionCall) {
   using namespace letsjit::ast::nodes;
   auto context = letsjit::compilation::MakeContext();
 
   context->RegisterExternalFunction("test_fun", test_fun);
-  FunctionNode node{{"foo", {}, letsjit::ast::MakeTypeHolder<void>()}, MakeSequence(MakeFunctionCall("test_fun", MakeNumber(42)), MakeReturn())};
+  FunctionNode node{
+      {"foo", {}, letsjit::ast::MakeTypeHolder<void>()},
+      MakeSequence(MakeFunctionCall("test_fun", MakeNumber(42)), MakeReturn())};
   node.CompileInstruction(*context);
   context->Compile();
   auto foo = context->GetFunction("foo");

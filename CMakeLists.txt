@@ -37,3 +37,13 @@ foreach(file ${test_sources})
     target_link_libraries(${bin_name} PUBLIC ${llvm_libs})
     target_link_libraries(${bin_name} PUBLIC letsjit)
 endforeach()
+
+
+file(GLOB_RECURSE ALL_SOURCE_FILES *.cpp *.h)
+
+add_custom_target(
+        clang-format
+        COMMAND /usr/bin/clang-format-9
+        -i
+        ${ALL_SOURCE_FILES}
+)

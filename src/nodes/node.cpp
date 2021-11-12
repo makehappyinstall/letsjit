@@ -2,4 +2,4 @@
 
 namespace letsjit::ast::nodes {
 Node::~Node() {}
-}
+} // namespace letsjit::ast::nodes
