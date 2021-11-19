@@ -1,7 +1,7 @@
 #pragma once
 
 #include <llvm/IR/Value.h>
-#include <ast/typeinfo.hpp>
+#include <ast/types/typeinfo.hpp>
 
 namespace letsjit::ast {
 

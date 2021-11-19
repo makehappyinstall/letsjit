@@ -2,9 +2,9 @@
 
 #include <llvm/IR/Value.h>
 
-#include "ast/compiled_value.hpp"
-#include "ast/typeinfo.hpp"
-#include "compilation/context.hpp"
+#include <ast/compiled_value.hpp>
+#include <ast/types/typeinfo.hpp>
+#include <compilation/context.hpp>
 
 namespace letsjit::ast {
 

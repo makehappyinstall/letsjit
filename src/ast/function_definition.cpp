@@ -7,8 +7,9 @@ namespace letsjit::ast {
 void FunctionDefinition::CompileInstruction(
     const letsjit::compilation::Context &context) const {
   auto decl = GetDeclaration();
-  std::vector<::llvm::Type *> arg_list = decl.FetchArgTypes(context);
-  auto ret_type = decl.return_type.ToTypeinfo(context.GetLLVMContext());
+  std::vector<::llvm::Type *> arg_list =
+      decl.FetchArgTypes(context.GetTypesContext());
+  auto ret_type = decl.return_type.ToTypeinfo(context.GetTypesContext());
   ::llvm::FunctionType *func_type =
       ::llvm::FunctionType::get(ret_type.RawType(), arg_list, false);
   auto fun_ptr =
@@ -22,7 +23,7 @@ void FunctionDefinition::CompileInstruction(
     ++id;
   }
 
-  context.RegisterFunction(finfo);
+  context.GetTypesContext().RegisterFunction(finfo);
 
   auto block =
       ::llvm::BasicBlock::Create(context.GetLLVMContext(), "entry", fun_ptr);

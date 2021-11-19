@@ -7,23 +7,7 @@
 #include <llvm/ExecutionEngine/ExecutionEngine.h>
 #include <llvm/ExecutionEngine/RTDyldMemoryManager.h>
 #include <llvm/ExecutionEngine/SectionMemoryManager.h>
-#include <llvm/Support/DynamicLibrary.h>
 #include <llvm/Support/TargetSelect.h>
-
-namespace letsjit {
-
-std::vector<llvm::Type *>
-FunctionDeclaration::FetchArgTypes(const compilation::Context &ctx) const {
-  std::vector<llvm::Type *> result{};
-  result.reserve(args.size());
-  std::transform(args.begin(), args.end(), std::back_inserter(result),
-                 [&ctx](const auto &arg) {
-                   return arg.second.ToTypeinfo(ctx.GetLLVMContext()).RawType();
-                 });
-  return result;
-}
-
-} // namespace letsjit
 
 namespace letsjit::compilation {
 
@@ -35,39 +19,12 @@ Context::Context() {}
 
 ::llvm::Module &Context::GetModule() const { return *module; }
 
+TypesContext &Context::GetTypesContext() const { return *types_context; }
+
 std::unique_ptr<Context> MakeContext() { return std::make_unique<Context>(); }
 
-void Context::RegisterFunction(const FunctionInfo &function_info) const {
-  functions->emplace(function_info.declaration.name,
-                     std::make_unique<FunctionInfo>(function_info));
-}
-
-void Context::RegisterExternalFunctionImpl(const FunctionDeclaration &fdecl,
-                                           void *fun_ptr) const {
-  std::vector<llvm::Type *> args = fdecl.FetchArgTypes(*this);
-  auto fun_type = llvm::FunctionType::get(
-      fdecl.return_type.ToTypeinfo(GetLLVMContext()).RawType(), args, false);
-  FunctionInfo finfo{fdecl,
-                     ::llvm::Function::Create(fun_type,
-                                              ::llvm::Function::ExternalLinkage,
-                                              fdecl.name, &GetModule()),
-                     {},
-                     fun_ptr};
-  size_t id = 0;
-  for (auto &arg : finfo.function->args()) {
-    arg.setName(fdecl.args[id].first);
-    finfo.arg_map[arg.getName()] = {&arg};
-    ++id;
-  }
-  RegisterFunction(finfo);
-}
-
 void Context::EnterFunction(const std::string &name) const {
-  if (auto it = functions->find(name); it != functions->end()) {
-    call_stack.push(it->second.get());
-    return;
-  }
-  throw std::runtime_error("Invalid function name " + name);
+  call_stack.push(GetTypesContext().GetFunctionPtr(name));
 }
 
 void Context::ExitFunction() const { call_stack.pop(); }
@@ -89,13 +46,6 @@ FunctionInfo Context::CurrentFunction() const {
   return *call_stack.top();
 }
 
-FunctionInfo Context::GetFunction(const std::string &name) const {
-  if (const auto it = functions->find(name); it != functions->end()) {
-    return *it->second;
-  }
-  throw std::runtime_error("Unknown function " + name + " requested");
-}
-
 void Context::Compile() {
   std::string errStr;
   std::unique_ptr<::llvm::RTDyldMemoryManager> MM =
@@ -103,14 +53,7 @@ void Context::Compile() {
   ::llvm::InitializeNativeTarget();
   LLVMInitializeNativeAsmPrinter();
 
-  for (const auto &fun : *functions) {
-    if (fun.second->fun_ptr) {
-      //      NOTE: addGlobalMapping() doesn't works with MCJIT
-      //      execution_engine_->addGlobalMapping(fun.first,
-      //      reinterpret_cast<uint64_t>(fun.second->fun_ptr));
-      ::llvm::sys::DynamicLibrary::AddSymbol(fun.first, fun.second->fun_ptr);
-    }
-  }
+  GetTypesContext().InitGlobalFunctions();
 
   execution_engine_ = ::llvm::EngineBuilder(std::move(module))
                           .setEngineKind(::llvm::EngineKind::JIT)
@@ -122,11 +65,7 @@ void Context::Compile() {
                           .setMCPU(::llvm::sys::getHostCPUName())
                           .create();
 
-  for (const auto &fun : *functions) {
-    if (!fun.second->fun_ptr)
-      fun.second->fun_ptr = reinterpret_cast<void *>(
-          execution_engine_->getFunctionAddress(fun.first));
-  }
+  GetTypesContext().InitLocalFunctions(execution_engine_);
 
   if (!errStr.empty()) {
     throw std::runtime_error(errStr);

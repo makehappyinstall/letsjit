@@ -156,7 +156,8 @@ int test_function(int x, double y) { return x + y; }
 TEST(SimpleExpr, ExternalFunctionCall) {
   using namespace letsjit::ast::nodes;
   auto context = letsjit::compilation::MakeContext();
-  context->RegisterExternalFunction("test_function", test_function);
+  context->GetTypesContext().RegisterExternalFunction("test_function",
+                                                      test_function);
   auto foo_func = std::make_shared<FunctionNode>(
       letsjit::FunctionDeclaration{"foo",
                                    {{"x", letsjit::ast::MakeTypeHolder<int>()}},
@@ -183,7 +184,8 @@ entry:
 TEST(SimpleExpr, ExternalFunctionCallInstruction) {
   using namespace letsjit::ast::nodes;
   auto context = letsjit::compilation::MakeContext();
-  context->RegisterExternalFunction("test_function", test_function);
+  context->GetTypesContext().RegisterExternalFunction("test_function",
+                                                      test_function);
   auto foo_func = std::make_shared<FunctionNode>(
       letsjit::FunctionDeclaration{"foo",
                                    {{"x", letsjit::ast::MakeTypeHolder<int>()}},
@@ -204,6 +206,111 @@ entry:
   %calltmp = call i32 @test_function(i32 %x, double 0.000000e+00)
   %calltmp1 = call i32 @test_function(i32 %x, double 1.000000e+00)
   ret void
+}
+)");
+}
+
+struct FunctionReturnPointerStruct {};
+FunctionReturnPointerStruct *function_returns_pointer() { return nullptr; }
+
+TEST(SimpleExpr, FunctionReturnPointer) {
+  using namespace letsjit::ast::nodes;
+  auto context = letsjit::compilation::MakeContext();
+  context->GetTypesContext().RegisterStruct(
+      {"FunctionReturnPointerStruct", {}, typeid(FunctionReturnPointerStruct)});
+  context->GetTypesContext().RegisterExternalFunction(
+      "function_returns_pointer", function_returns_pointer);
+  auto foo_func = std::make_shared<FunctionNode>(
+      letsjit::FunctionDeclaration{
+          "foo",
+          {},
+          letsjit::ast::MakeTypeHolder<FunctionReturnPointerStruct *>(
+              context->GetTypesContext())},
+      MakeReturn(MakeFunctionCall("function_returns_pointer")));
+  foo_func->CompileInstruction(*context);
+  ASSERT_EQ(context->DumpIR(), R"(; ModuleID = 'main_module'
+source_filename = "main_module"
+
+%FunctionReturnPointerStruct = type opaque
+
+declare %FunctionReturnPointerStruct* @function_returns_pointer()
+
+define %FunctionReturnPointerStruct* @foo() {
+entry:
+  %calltmp = call %FunctionReturnPointerStruct* @function_returns_pointer()
+  ret %FunctionReturnPointerStruct* %calltmp
+}
+)");
+}
+
+struct TestSubStruct {
+  int value;
+};
+
+struct TestStruct {
+  int foo;
+  double bar;
+  TestSubStruct sub_struct;
+};
+
+TEST(SimpleExpr, FieldAccess) {
+  using namespace letsjit::ast::nodes;
+  auto context = letsjit::compilation::MakeContext();
+  context->GetTypesContext().RegisterStruct(
+      {"TestStruct",
+       {{"foo", {&TestStruct::foo, context->GetTypesContext()}},
+        {"bar", {&TestStruct::bar, context->GetTypesContext()}}},
+       typeid(TestStruct)});
+  FunctionNode node{
+      {"get_bar",
+       {{"test_struct", letsjit::ast::MakeTypeHolder<TestStruct *>()}},
+       letsjit::ast::MakeTypeHolder<double>()},
+      MakeReturn(MakeFieldAccess(MakeFunctionArg("test_struct"), "bar"))};
+  node.CompileInstruction(*context);
+  ASSERT_EQ(context->DumpIR(), R"(; ModuleID = 'main_module'
+source_filename = "main_module"
+
+%TestStruct = type opaque
+
+define double @get_bar(%TestStruct* %test_struct) {
+entry:
+  %addptroffset = add %TestStruct* %test_struct, i64 8
+  %deref = load double, double* %addptroffset
+  ret double %deref
+}
+)");
+}
+
+TEST(SimpleExpr, SubstructFieldAccess) {
+  using namespace letsjit::ast::nodes;
+  auto context = letsjit::compilation::MakeContext();
+  context->GetTypesContext().RegisterStruct(
+      {"TestSubStruct",
+       {{"value", {&TestSubStruct::value, context->GetTypesContext()}}},
+       typeid(TestSubStruct)});
+  context->GetTypesContext().RegisterStruct(
+      {"TestStruct",
+       {{"foo", {&TestStruct::foo, context->GetTypesContext()}},
+        {"bar", {&TestStruct::bar, context->GetTypesContext()}},
+        {"sub_struct", {&TestStruct::sub_struct, context->GetTypesContext()}}},
+       typeid(TestStruct)});
+  FunctionNode node{
+      {"get_sub_struct",
+       {{"test_struct", letsjit::ast::MakeTypeHolder<TestStruct *>()}},
+       letsjit::ast::MakeTypeHolder<TestSubStruct *>()},
+      MakeReturn(
+          MakeFieldAccess(MakeFunctionArg("test_struct"), "sub_struct"))};
+  node.CompileInstruction(*context);
+  ASSERT_EQ(context->DumpIR(), R"(; ModuleID = 'main_module'
+source_filename = "main_module"
+
+%TestSubStruct = type opaque
+%TestStruct = type opaque
+
+define %TestSubStruct* @get_sub_struct(%TestStruct* %test_struct) {
+entry:
+  %addptroffset = add %TestStruct* %test_struct, i64 16
+  ret %TestSubStruct* %addptroffset
 }
 )");
 }

@@ -3,7 +3,7 @@
 #include <string>
 #include <vector>
 
-#include <ast/typeinfo.hpp>
+#include <ast/types/typeinfo.hpp>
 #include <ast/expressions/expression.hpp>
 #include <ast/instructions/instruction.hpp>
 

@@ -14,3 +14,4 @@
 #include "ast/nodes/sequence.hpp"
 #include "ast/nodes/condition.hpp"
 #include "ast/nodes/function_call.hpp"
+#include "ast/nodes/field_access_node.hpp"

@@ -4,7 +4,7 @@ namespace letsjit::ast {
 
 CompiledValue
 FunctionCall::Compile(const letsjit::compilation::Context &ctx) const {
-  const auto &finfo = ctx.GetFunction(GetFunctionName());
+  const auto &finfo = ctx.GetTypesContext().GetFunction(GetFunctionName());
   const auto args = GetArgs();
   if (finfo.arg_map.size() != args.size()) {
     throw std::runtime_error("Invalid args count in function " +
